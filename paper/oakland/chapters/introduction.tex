@@ -1,0 +1,26 @@
+\section{Introduction}
+
+Address sanitizer is very useful but introduces a high overhead around ~2x.
+Thus can only be applied in the program testing stage, as a companion to the fuzzing campaign.
+
+We hope it can be applied in production.
+It is more generic than other security tools like control-flow integrity, stack canary, and shadow stacks.
+
+
+The key idea is to avoid unnecessary checking. Especially for loops.
+While not skip necessary checks.
+
+1. First find a test program with loops.
+2. Modify at the source code level to enforce shops, and evaluate its overhead.
+
+
+\begin{table}[tp]
+    \begin{tabular}{|l|l|l|l|l|}
+        \hline
+                     & Simple Iterating & Factorial Calculation & Euclidean GCD & Fibonacci sequence \\ \hline
+        Simple Loop  &                  &                       &               &                    \\ \hline
+        Double Loop  &                  &                       &               &                    \\ \hline
+        Tripper Loop &                  &                       &               &                    \\ \hline
+    \end{tabular}
+    \caption{Performance evaluation on micro-benchmarks.}
+\end{table}
