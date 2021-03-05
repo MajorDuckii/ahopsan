@@ -1,18 +1,35 @@
 \section{Introduction}
 
-Address sanitizer is very useful but introduces a high overhead around ~2x.
-Thus can only be applied in the program testing stage, as a companion to the fuzzing campaign.
+\newcounter{intr}
+\renewcommand\yphn[1]{\stepcounter{intr} \textcolor{blue} {\theintr.} \yphl{#1}}
 
-We hope it can be applied in production.
-It is more generic than other security tools like control-flow integrity, stack canary, and shadow stacks.
+\yphn{Sanitizer Introduction}
+Memory sanitizer refers to a wide range of techniques that ensure memory integrity and confidentiality,
+i.e. memory access should not break memory layout unintentionally and read/write data regions unexpectedly.
+
+There are a lot of memory sanitizers have been proposed.
+
+Memory sanitizers are very useful.
+ASan helps fuzzing tool found uncountable program bugs.
+
+Memory sanitizers of course can detect memory errors that overwrite function pointers,
+therefore they also can mitigate control-flow hijacking attacks.
+Compared with control-flow integrity schemes,
+memory sanitizers can prevent the attack one step earlier as they act before a malicious code point is activated.
 
 
-The key idea is to avoid unnecessary checking. Especially for loops.
-While not skip necessary checks.
+\yphn{Problems of Address Sanitizer: Performance}
+However, memory sanitizers are always complained about because of their higher performance overhead.
 
-1. First find a test program with loops.
-2. Modify at the source code level to enforce shops, and evaluate its overhead.
+Asan introduces a performance overhead around two times.
 
+\yphn{Existing Perf Optimization Schemes}
+Use low-fat pointers. But introduce compatibility problems.
+They should carefully support the mathematics operations on data pointers.
+
+The overhead is mainly due to the high-frequency validity checking inside loops.
+
+Move checks outside of loops. But there are no easy ways to identify complex loops.
 
 \begin{table}[tp]
     \begin{tabular}{|l|l|l|l|l|}
@@ -25,22 +42,62 @@ While not skip necessary checks.
     \caption{Performance evaluation on micro-benchmarks.}
 \end{table}
 
-In order to ;
-shadow the variables,
+\yphn{Our Scheme}
+This work introduces a new scheme to reduce memory checking frequency,
+it is orthogonal to existing schemes that move checkers outside of a loop.
 
-We need to know the poiters.
-Just like
-we need to
-If there are
-then how to shadow the pointers.
+The key idea is a hop-checking algorithm based on a red-zoned memory layout.
+In this work, the concept of red-zone has the same meaning as it in the Asan,
+i.e. data items are isolated with red-zones which are not allowed to read and write by vanilla program code.
+
+Differently, in this work red-zones are filled with special data (suppose all 0xcc).
+Therefore, invalid memory writes on red-zone areas would overwrite the special data,
+thus can be detected by checking the integrity of red-zones.
+Invalid reads would not leave any footprint, thus if want to detect them should check every memory read access on the spot.
+
+Our scheme employs the principle of locality of data access.
+Our hop-checking algorithm guarantees that memory accesses cannot cross the red-zones to destroy other data.
+For each data pointer, we create a shadow to remember one of its historical values, i.e. whether it has already accessed.
+A naive algorithm may not make use of the shadow value,
+simply checking the data pointer once it is used to do memory access.
+This algorithm works like the basic configuration of Asan, thus it would introduce high overhead.
+On the other hand, our hop-checking algorithm checks the data pointer only when it moves forward or backward away from the shadow value beyond a threshold.
+Suppose the threshold value is the size of a red-zone chunk, denoted as $REDZONE\_SIZE$.
+Once the security checking is activated, it does security checks as most other address sanitizers do.
+Meanwhile, it also backups the current value of the data pointer into the shadow,
+preparing to trigger another checking in the next cycle.
+
+Note that, we intentionally make the shadow not be initialized.
+In such a way, it would store a randomized value, thus the data pointer always points to a memory address far away from such a  randomized value,
+thus the data pointer would be checked at the first time it is used to access memory.
+
+Briefly, every checking ensures that the following memory access would not cross over the red-zones to destroy other data regions.
+However, they may read/write the red-zones.
+As described above, writes to red-zones would be detected by checking the integrity of red-zones.
+Reads to red-zones have a probability to escape from checking.
+This can be mitigated by checking the last read access.
+
+Because of the hop-skipping algorithm, we can reduce the frequency of memory checking, thus improve the performance.
+This is very efficient for loops with small steps. For example, if the step is 1 as for a byte, and the $REDZONE\_SIZE$
+equals to 32, then the overhead is reduced almost  32 times. Thus, it can improve the performance dramatically.
+
+We use an LLVM pass to identify all the data pointers and create their shadows.
 
 
-It works like to adjust the source code. to enrich the source code.
+To shadow the variables,
+
+We need to know the pointers.
+
+It works like adjusting the source code. to enrich the source code.
 1. How to identify data pointers;
 2. How to instrument; base on LLVM; This should be accomplished by front-end.
 3. How to do check;
 4. The affection of compiler optimization.
 
+In the front-end, we identify all the data pointers.
+If the data pointer accesses memory, whether read or write, we create another pointer as a shadow.
+This shadow is not used for access memory but used as a conditional trigger to do memory security checking.
 
 
+Currently, We implementable this algorithm with source code.
 
