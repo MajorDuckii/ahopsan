@@ -101,3 +101,183 @@ This shadow is not used for access memory but used as a conditional trigger to d
 
 Currently, We implementable this algorithm with source code.
 
+\yphn{Why Asan High overhead}
+For each memory access, it does checks?
+Does it neccessary?
+
+\yphn{How we reduce the overhead}
+Access array elements and structu memmbers, the checking frequency can be reduced.
+
+We improve th perforammcne by reduce checking freq3ucney to arrayes and structs.
+
+Before teh checks, we
+The core,
+
+We depends a xxx on memory layout.
+Data elements layout. Each elememt  with a trailing redzone.
+For overflow.
+
+How to do quick memory checking?
+
+We create a red-zone around an element, the red-zone stores cookies (i.e. special data).
+When there is overhead, it can be detected.
+The data elelment are also aligned to a special address.
+So we create element from different memroy region. just as low-fat.
+So we can detect the start address with simple rounding down to a doubdanry.
+
+
+
+Each checking ensure that current address is away from a red-zone.
+So the
+
+
+In this work with a memroy to the last checked memory address.
+For each veariblae.
+
+So for each memroy access, it can be deduced to an variable that access the emmroy.
+
+For the value -set analsys. We know each instrauction would
+access a set of memory address and a set of values.
+
+Accodding to a compile top-down compiling process. SSA
+This insruction is converted from a certain expression.
+Which has a convertain semantic meansing in developoing langugen-level.
+This memroy address?
+access different data elementss at different iteration.
+
+With historical knowledge. store the last checked adderss.
+If the distance bwttten teh new addares and the lastst checked address is inside a bounary, i,..e. less than the size of
+a red-zone.
+We use a variable size of read-zone.
+Or use a fixed size read-zone?
+This is a trade of perforamnce with memory overhead. Currently, we use fixed size of redzones.
+to reduce the complexity.
+
+For each memory address access, we create a temoroy vairable to reambemer its last checked addresses.
+When the progress on goning, if the new address is byond the gap, they we check it again.
+around 2x memory ovrehead. The stride.
+
+Why our method works? Because of array access?
+
+It is easy for head varibles when we can control the memory allocator.
+We can use a table to get its size,
+
+If we use variable size of redzone, then how to create red-zone for stack buffers.
+
+Use historcal values, we can avoid some problems.
+
+\yphn{We need a profiling process}
+We detect how does the memory access patterns.
+How many memroy bufffers, how many objects.
+
+Optimization for object access.
+
+So we need some IR exampple to observe.
+
+
+
+
+
+
+So for each instruction,
+
+
+with historical memory.
+
+What's our contribution.
+
+Can be hoist outside a loop.
+
+Optimize object access checking.
+
+An optimziation to address sanitizer:
+Reduce the  checking fraeuncy.
+
+
+We use variable size of redzones.Small memory overhead. 2x.
+This can be achieved by hoist the checking outside of loops. But it difficult for xxx.
+Each history address.
+
+For object, we need that the object is checked.
+$p->x$ and $p->y$ checked only once.
+
+Why we can do it?
+Why hoist checks outside loops? what is the challenged.
+
+access data elements? How to hoist?
+
+Do some kinds of tests before checking?
+
+We also need to find out the challegnes to hoist checks outside loops?
+
+
+Data memeber access?
+
+For simplicity, we first ignore stack buffers.
+
+There are my load and store instructions applied on the stack local variables.
+
+
+% \begin{minted}[fontsize=\scriptsize,frame=single,linenos,xleftmargin=10pt,numbersep=-10pt]{cpp}
+\begin{minted}[fontsize=\scriptsize,frame=single,xleftmargin=10pt]{cpp}
+void foo(char *p) { while(*p){global_sum += *p; p++;} }
+\end{minted}
+
+
+Expore the solutions to recude the frequence of checks.
+
+Array access and object access.
+
+Our naive optimization, can only optimize acces to arrarys.
+
+But we provie optimizatin to objects.
+
+Create Redzone inside an object. to detect internal overflow.
+
+Maybe internal overflow is very importnt.
+We can enable it.
+
+
+
+If don't need to optimize.
+Code usally contains If they are many access to diffiernt fields of the ame object in the same block.
+So we can check it only.
+
+
+We provide flags to control the optimzation.
+If need to detect
+
+How to deal with internal object overflow? ovverrite internal function pointers.
+Lowfat cannot do it!
+
+
+
+
+Do we need to do a comprehesive check after a loop.
+
+16~1024 power of two
+
+
+Evaluations:
+We need the block size
+Malloc
+We ignore stack:
+
+Object & object access (fileds access)
+Optimization times
+
+
+
+
+
+So memory buffers. So we create redzone inside a buffer.
+So the bigger object.
+If there are initernal buffer overflow, we
+
+
+
+For object, we just need to check the start address once.
+
+Array, objects, O0 O2
+
+

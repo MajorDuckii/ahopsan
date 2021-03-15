@@ -337,7 +337,7 @@
 \usepackage{color}
 \newcommand{\yphl}[1]{\textcolor{blue} {#1}\\}
 \newcommand{\yphn}[1]{\yphl{#1}}
-
+\usepackage{minted}
 
 % *** Do not adjust lengths that control margins, column widths, etc. ***
 % *** Do not use packages that alter fonts (such as pslatex).         ***
@@ -443,6 +443,8 @@
 
 \input{chapters/introduction.tex}
 
+\input{chapters/backgroundrelatedworks.tex}
+
 \input{chapters/design.tex}
 
 
@@ -528,8 +530,10 @@
 % footnotes above bottom floats. This can be corrected via the \fnbelowfloat
 % command of the stfloats package.
 
+\input{chapters/evaluation.tex}
 
 \input{chapters/conclusion.tex}
+
 
 
 % conference papers do not normally have an appendix
