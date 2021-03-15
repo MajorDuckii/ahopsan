@@ -2,16 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// int f(char *p)
-// {
-//   // p can be any pointer pointing anywhere including OOB
-//   int x = 0;
-//   while (*p) {
-//     x += *p;
-//     p++;
-//   }
-//   return x;
-// }
+int globalx = 0;
+void foo(char *p)
+{
+  while (*p) {
+    globalx += *p;
+    p++;
+  }
+}
 
 void do_sanitize(const char *p) { printf("%s\n", __FUNCTION__); }
 
