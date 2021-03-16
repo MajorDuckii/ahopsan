@@ -31,16 +31,6 @@ The overhead is mainly due to the high-frequency validity checking inside loops.
 
 Move checks outside of loops. But there are no easy ways to identify complex loops.
 
-\begin{table}[tp]
-    \begin{tabular}{|l|l|l|l|l|}
-        \hline
-                     & Simple Iterating & Factorial Calculation & Euclidean GCD & Fibonacci sequence \\ \hline
-        Simple Loop  &                  &                       &               &                    \\ \hline
-        Double Loop  &                  &                       &               &                    \\ \hline
-        Tripper Loop &                  &                       &               &                    \\ \hline
-    \end{tabular}
-    \caption{Performance evaluation on micro-benchmarks.}
-\end{table}
 
 \yphn{Our Scheme}
 This work introduces a new scheme to reduce memory checking frequency,
@@ -175,16 +165,8 @@ Optimization for object access.
 So we need some IR exampple to observe.
 
 
-
-
-
-
-So for each instruction,
-
-
-with historical memory.
-
-What's our contribution.
+For loops, one is to hoist the memory check outside of loops.
+But what about object access?
 
 Can be hoist outside a loop.
 
@@ -222,6 +204,12 @@ There are my load and store instructions applied on the stack local variables.
 \begin{minted}[fontsize=\scriptsize,frame=single,xleftmargin=10pt]{cpp}
 void foo(char *p) { while(*p){global_sum += *p; p++;} }
 \end{minted}
+The generated binary code contains two memory checks for the loop or optimiztion-level.
+Altugho it can optimized to contail one check for optimize-level O2.
+It is still.
+In semantic, this is an array access. It can be optimized.
+
+
 
 
 Expore the solutions to recude the frequence of checks.
@@ -251,33 +239,21 @@ How to deal with internal object overflow? ovverrite internal function pointers.
 Lowfat cannot do it!
 
 
+Existing DBI tool can count the excuted memory access, but they lack of the semantic information.
+We want to know what it is accessed, access an array element, a pointer derefernece, or strucutre member.
 
 
-Do we need to do a comprehesive check after a loop.
+\yphn{Contributions}
+This work made the following contributions:
 
-16~1024 power of two
-
-
-Evaluations:
-We need the block size
-Malloc
-We ignore stack:
-
-Object & object access (fileds access)
-Optimization times
+\begin{itemize}
+    \item A semantic-aware memory access profiler.
+    \item A semantic-aware address sanitizer.
+    \item A prototype implmentation of profiler.
+    \item A prototype implementation of sanitizer.
+    \item Detailed evaluations on SPEC.
+\end{itemize}
 
 
-
-
-
-So memory buffers. So we create redzone inside a buffer.
-So the bigger object.
-If there are initernal buffer overflow, we
-
-
-
-For object, we just need to check the start address once.
-
-Array, objects, O0 O2
 
 

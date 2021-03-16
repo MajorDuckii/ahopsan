@@ -1,7 +1,44 @@
-\section{design}
+\section{System Design}
 
-Set the hops in terms of pointer types.
 
-Set the hop-steps in terms of poniter types.
+\newcounter{dsgn}
+\renewcommand\yphn[1]{\stepcounter{dsgn} \textcolor{blue} {\thedsgn.} \yphl{#1}}
 
-The optimization also affect our decision choice.
+
+We design a semantic-aware memory access profiler and
+a semantic-aware address sanitizer.
+
+\subsection{Languate Level Semantics}
+To parse the semantics of each memory access is critical.
+
+Currently, we define the following semantics: array access or struct access, pointer dereference.
+
+\yphn{Inputs}
+
+We exploit the source code.
+
+\yphn{Outputs}
+For a program, both profiler and sanitizer would generate their binaries.
+
+
+\subsection{Semantic Analysis}
+An important task is to collect the semantics of memory access.
+
+\subsection{Memory object organization}
+Do we need to use variable size red-zones for different kinds of objects?
+
+\subsubsection{Heap Buffers}
+
+\subsubsection{Stack buffers}
+
+\subsubsection{Internal buffers}
+An object sometimes contains a buffer inside itself.
+This buffer may be security-sensitive if its adjacent members are function pointers.
+
+For such an object, we create red-zones to surround the buffers, similar to what Asan does on stack buffers.
+
+\subsection{Instrumentation}
+
+Do we need to do another check after a loop?
+
+\subsection{Exception Handling}
