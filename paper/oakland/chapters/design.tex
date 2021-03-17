@@ -77,9 +77,46 @@ This is really an old problem.
 
 
 
-\subsection{Symbolic IR Execution Engine}
+\subsection{Symbolic IR Execution}
+
+% The design of symbolic execution engine
+% Input & output
+
+The address set of each IR register.
+LLVM-IR has unlimited registesrs.
+
+Algorithm:
+The exeuction enginne schedule the execution basic block by block.
+The schedule units are basiuc block.
+Each basic block are feed by a seriours of configuartion.
+Each configuration is consist with a set of rgistesrs status.
+The entry basick block start with an empty basic block.
+The partermeters.
+Eveay new occurentcy of a regiuster is denoted by a symbol value.
+Every IR instructoin is.
+The register staus changes along with the IR execution.
+
+Machine status: Register status. + Memory status.
+
+Change the status along the IR execution.
+
+All registesrs and memroy slots are initialized with symbolic values.
+Therefore, the first read of a registe or a memoery adddress would get a symbolic values.
+
+Every Function is an execution unit.
+
+
+
 
 \subsection{Symbolic Address-set Analysis}
+For IR instruction, simply idenfitied by the line number.
+On my symbolic execution engine, collect the accessed address by each instruction.
+
+Then analsys the memory access patterns, to
+idenitfy array access an struct member access.
+
+
+
 
 \subsection{Instrumentation}
 
