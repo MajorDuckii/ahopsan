@@ -3,6 +3,35 @@
 \newcounter{intr}
 \renewcommand\yphn[1]{\stepcounter{intr} \textcolor{blue} {\theintr.} \yphl{#1}}
 
+\yphn{Memory errors}
+
+According to a recent report that examining 25 years of vulnerabilities (from 1998 to 2012),
+buffer overflow causes 14 percent of software security vulnerabilities and 35 percent of critical vulnerabilities,
+making it the leading cause of software security vulnerabilities overall.
+
+As of July 2014, the TIOBE index indicates that the C programming language,
+which is the language most commonly associated with buffer overflows,
+is the most popular language with 17.1 percent of the market.
+Embedded systems, network stacks, networked applications, and high-performance computing rely heavily upon C.
+
+
+Address sanitizer is major buffer overflow prevention mechaniesm.
+It works by xxx.
+
+
+Because C/C++ focuses on performance and being close to the hardware,
+there are gramma sugars that can do bounds checks on array references and pointer dereferences are not part of the language.
+
+This can done with the help of compiler.
+This should be calacualtes dynamicially.
+If the user desires bounds checking, then for the memory accesses that cannot be resolved at compile time, the compiler must insert additional instructions into the generated code to perform the checks.
+
+
+The time the processor takes to execute those extra instructions at run time is the performance overhead of a bounds checking mechanism.
+The runtime overheade.
+
+
+
 \yphn{Sanitizer Introduction}
 Memory sanitizer refers to a wide range of techniques that ensure memory integrity and confidentiality,
 i.e. memory access should not break memory layout unintentionally and read/write data regions unexpectedly.
@@ -22,6 +51,11 @@ memory sanitizers can prevent the attack one step earlier as they act before a m
 However, memory sanitizers are always complained about because of their higher performance overhead.
 
 Asan introduces a performance overhead around two times.
+
+I have found that many researchers report excellent low overheads for automated buffer overflow elimination schemes while in practical use they are actually substantially higher. For example, one set of researchers may report very low overheads by taking advantage of a trap on misaligned memory accesses, but many processors do not trap when dereferencing misaligned pointers. As a result, the check for misalignment must be performed by software, which causes a much higher overhead. Another set of researchers may use a shadow memory by dividing up the address space for the program and for the overflow checking. Again, this may not work in the practical domain because it requires operating system modifications.
+
+We need practical solutons.
+I investigated what performance could be achieved in the practical realm and how that performance could be improved for deployment of an automated, compiler-based memory safety checking tool.
 
 \yphn{Existing Perf Optimization Schemes}
 Use low-fat pointers. But introduce compatibility problems.
@@ -247,11 +281,11 @@ We want to know what it is accessed, access an array element, a pointer derefern
 This work made the following contributions:
 
 \begin{itemize}
-    \item A semantic-aware memory access profiler.
-    \item A semantic-aware address sanitizer.
-    \item A prototype implmentation of profiler.
-    \item A prototype implementation of sanitizer.
-    \item Detailed evaluations on SPEC.
+  \item A semantic-aware memory access profiler.
+  \item A semantic-aware address sanitizer.
+  \item A prototype implmentation of profiler.
+  \item A prototype implementation of sanitizer.
+  \item Detailed evaluations on SPEC.
 \end{itemize}
 
 
@@ -269,6 +303,7 @@ datalayout.
 
 Memory access can be expected mode.
 
+
 \yphn{Ground truth against Asan}
 
 \yphn{Problem Analysis}
@@ -279,5 +314,28 @@ Memory access can be expected mode.
 
 \yphn{Our solution}
 
+Does our contribution is big enough.
+Then it depends on how much imporviemence. Therefore, we need to study lowfat and asan first.
+In thory how does they work? and study thrir instrumentation.
 
+So, for differnet type of mmeory acces, applies differnt stragegees.
+Our main contricution is appiled on accessing array elements and struct members.
+
+
+For different memory access, apply differnet policies.
+
+
+Simple derefenece, how to check? We can combine with asan?
+
+
+
+\yphn{xxx conclusion}
+
+In addition to hoisting bounds checks out of loops, I also tried to hoist them out of functions. I reasoned that if I hoisted a bounds check into the caller, there might be information in the calling function to reveal the size of the objects, eliminating the need for a bounds check.
+
+
+There is hope that automated buffer overflow checking will one day perform fast enough to work in future performance-critical systems.
+
+
+Intel called "MPX" Memory Protection Extensions. Once Intel installs those hardware improvements, it is possible that we will be able to use compiler enforced buffer overflow elimination on performance-critical code as well.
 

@@ -60,3 +60,132 @@ But most of them are not interesting.
   %add1 = add nsw i32 %5, %4
   store i32 %add1, i32* %sum, align 4
 \end{minted}
+
+
+\yphn{Related works}
+
+I began with two memory safety checkers that meet these criteria, SAFECode and SoftBound.
+
+\subsection{Peroformance Improvment}
+
+I made three performance enhancements to SoftBound to investigate their effects on performance.
+~\cite{Performance of Compiler-Assisted Memory Safety Checking}
+
+First, I hoisted spatial memory access checks out of loops when the loop bounds were known on entry. As an example, consider the following function:
+
+
+I next hoisted bounds checks out of a function and into its callers when the compiler could see all calls to the function, so that a bounds check will be executed somewhere (if necessary) if it is deleted from its original function.
+
+I found that unrolling loops thwarted some attempts to hoist bounds checks.
+
+Fully unrolled loops contained a sequence of memory accesses in straight-line code in place of one access within a loop. I therefore disabled loop unrolling.
+
+The third change was to test the performance of bounds checks on stores only (to prevent arbitrary code execution), or on strings only (because incorrect string management is a leading cause of vulnerabilities), or only on stores to strings. Limiting the bounds checks in this way can provide some insight into the tradeoff between security and performance.
+
+
+\subsection{Asan}
+\yphn{What is the idea}
+1. The run-time library replaces the \textit{malloc()} and \textit{free()} functions.
+2. The memory around malloc-ed regions (red zones) is poisoned.
+3. The free-ed memory is placed in quarantine and also poisoned.
+4. Every memory access in the program is checked if access a posied address.
+
+So what the different between positon and red-zone?
+
+This is guaranteed by the fact that malloc returns 8-byte aligned chunks of memory.
+
+malloc allocates the requested amount of memory with redzones around it. The shadow values corresponding to the redzones are poisoned and the shadow values for the main memory region are cleared.
+
+free poisons shadow values for the entire region and puts the chunk of memory into a quarantine queue (such that this chunk will not be returned again by malloc during some period of time).
+
+
+\yphn{The instruemntation and datalayout}
+It consisst of a compiler insttrumentation pass and
+a runtime library tha rep;ace the malloc funcitons.
+
+The tricky part is how to implement IsPoisoned very fast and ReportError very compact.
+
+If the shadow bytes is not zeor, which meanshing some bytesthe corspoinding program memory adddress
+are poisend. Then it will check wit a slow path.
+
+There is a shadowgap, which is not accessable.
+Any access woul caseu the progarm crash.
+
+The mappinf fucntiohn is very simiple
+$Shadow = (Mem >> 3) + 0x7fff8000;$
+
+How about use morey use even more compact shadow memory.
+Every access to porgram memory would companied with a shoawod memory access.
+This is the root cause of overhead.
+
+For unaligned access.The current compact mapping will not catch unaligned partially out-of-bound accesses:
+
+
+\yphn{Semantic-aware or not?}
+\yphn{Input and Output}
+\yphn{Optimizations}
+
+Call stack & incompatibility
+To ignore certain functions, one can use the no_sanitize_address attribute
+supported by Clang and GCC.
+Or crate and use a blacklist.
+
+\yphn{Momorey overhead}
+because ASan consumes 20 terabytes of virtual memory (plus a bit).
+
+
+\yphn{Optimization}
+AddressSanitizer does not need to instrument all memory accesses to find all bugs.
+
+1. avoid instrumenting individual accesses. hoist the checks outside of loops.
+2. Combine two accesses into one for struct member access.
+
+4. Using dataflow techniques for range checks elimination
+
+Combining checks across loop iterations:
+
+\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+  int *p;
+  // Enough to check __asan_region_is_poisoned(a, n*sizeof(*a))
+  for (i = 0; i < n; ++i)
+    p[i];
+\end{minted}
+
+The virtual address space is diviedde into 2 disjoiont classes:
+program memory and shadow memroy.
+Progarm memory is used by the regular program code.
+While shadows memory contains the metadata and shaow values.
+
+These two classess so mroy are well orgarnize such that the mapping progarm addrss
+to shadow address con be done fast.
+
+ASan maps 8 bytes of the progarm memory into 1 buytes of the shadow memory.
+
+Out-of-bounds accesses to heap, stack and globals
+Double-free, invalid free
+
+
+\yphn{Overhead}
+~2x
+
+\yphn{Security Guarantees}
+It can detect headp and stack buffer ovrealow.
+Also can do other things including user after frer and sue after return.
+
+
+
+\subsection{LowFat}
+
+
+\subsection{   Range check elimination}
+// The InductiveRangeCheckElimination pass splits a loop's iteration space into
+// three disjoint ranges.  It does that in a way such that the loop running in
+// the middle loop provably does not need range checks. As an example, it will
+// convert
+
+
+\subsection{Bounds-checking elimination}
+In computer science, bounds-checking elimination is a compiler optimization useful in programming languages or runtime systems that enforce bounds checking, the practice of checking every index into an array to verify that the index is within the defined valid range of indexes.[1] Its goal is to detect which of these indexing operations do not need to be validated at runtime, and eliminating those checks.
+
+So behind this work is a boundary chekcing eliminattion.
+

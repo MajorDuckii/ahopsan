@@ -105,6 +105,9 @@ Therefore, the first read of a registe or a memoery adddress would get a symboli
 
 Every Function is an execution unit.
 
+Merge operations
+
+
 
 
 
@@ -123,4 +126,87 @@ idenitfy array access an struct member access.
 \subsection{Data Layout}
 
 
+
+Suppose now we know where are the arracy access and datamember access.
+They how we desingh the data layout?
+
+
+\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+  if (isFarAway(ptr, ptr_lastchk)) {
+    if (isOOB(ptr)) error(); // ...
+  }
+\end{minted}
+
+1. use fixed stride;
+abs(ptr - ptr_lastchk) < 64;
+It doesn't need memory access.
+To guarantees safe memory access. SO the smallest size of red-zones is 64 bytes.
+
+The memory overhead would be considerable.
+
+
+if (isFarAway(ptr, ptr_lastchk)) {
+    if(isOOB(ptr)) error();
+    ptr_lastchk = ptr;
+  }
+
+\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+  if ((p ^ p_lastchk) < 64) {
+    if (isOOB(p)) error();
+    p_lastchk = p;
+  }
+\end{minted}
+
+
+2. use variable stride;
+abs(ptr-ptr_lastchk) < ptr_rdsize;
+
+
+
+\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+  if ((p ^ p_lastchk) < p_rdsize) {
+    if (isOOB(p)) error();
+    if (isFirstChk(p_lastchk)) p_rdsize = rdsize(p);
+    p_lastchk = p;
+  }
+\end{minted}
+
+
+We use 32 bit registers. Give a change to compile if it can make good use of a 64bit regitesr as two 32 bit registes.
+
+The memory is stroed.
+
+
+All size information are stroed in anarray, can be simply extracted from ptr.
+
+~2x memory overhead.
+
+So it needs one more memory access.
+
+
+So each data object contains some metadata, the size of data.
+
+\yphn{ISOOB}
+So for each memory address, we can round to the start address.
+So if the data is overwrite or overread, then it would ovwertiet the cookies.
+This bechaviour would be detected.
+
+For heaps buffers, we do like above. Use a lowfat style check.
+
+For stack, how to protect it?
+
+We need a final check for arrasy access and object access.
+But don't need for database dereference.
+They should be a not of data-pointers.
+
+
+For stack buffers, can we use the asan style checks?
+How we store metadata and set the red-zone?
+
+
+\yphn{How does Asan work?}
+The instrumentation and data layout of Asan.
+
+\yphn{How does Lowfat work?}
+The instrumentation and data layout of Lowfat.
 
