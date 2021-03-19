@@ -339,3 +339,31 @@ There is hope that automated buffer overflow checking will one day perform fast 
 
 Intel called "MPX" Memory Protection Extensions. Once Intel installs those hardware improvements, it is possible that we will be able to use compiler enforced buffer overflow elimination on performance-critical code as well.
 
+The key problem is bound checking elimination.
+
+\yphn{What kinds of elimination skills have alredy been applied on Asan}
+
+The goal of this work is to reduce the checking frequency on accessing array elements and struct members.
+The problem can be classified as boundary checking elimination. In fact, the goal is very simple:
+```
+if (isFarAway(p, p_lastchk)) {
+    if (isOOB(p)) error();
+    p_lastchk = p;
+  }
+```
+
+Even though this problem sounds old, but not solved well.
+Existing solutions that hoist the checking outside loops, or split the loops into several parts, do not work well.
+These solutions try to be perfect, but once their assumptions do not meet, they do nothing.
+Their flaws can be reflected by the implementation of Asan.
+For the following code snippet. Asan checks each memory access.
+```while(*p) {globalx +=*p, p++;}```
+
+This project would apply IR-level symbolic address-set analysis, to collect symbolic-addresses accessed by each IR instruction.
+Then use heuristic rules to find out patterns on accessing arrays and structs.
+Once get all these patterns, we can eliminate checks accordingly.
+
+The symbolic analysis algorithms are roughly designed according to my experience and early exploration.
+Now, need to be implemented.
+
+
