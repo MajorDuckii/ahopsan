@@ -281,11 +281,10 @@ We want to know what it is accessed, access an array element, a pointer derefern
 This work made the following contributions:
 
 \begin{itemize}
-  \item A semantic-aware memory access profiler.
-  \item A semantic-aware address sanitizer.
-  \item A prototype implmentation of profiler.
-  \item A prototype implementation of sanitizer.
-  \item Detailed evaluations on SPEC.
+  \item A new method to bounds-checking elimination: Symbolic Address-set analysis
+  \item A symbolic execution engine on LLVM-IR.
+  \item A prototype of semantic-aware address sanitizer.
+  \item Detailed evaluations on SPECint.
 \end{itemize}
 
 
@@ -365,5 +364,4 @@ Once get all these patterns, we can eliminate checks accordingly.
 
 The symbolic analysis algorithms are roughly designed according to my experience and early exploration.
 Now, need to be implemented.
-
 
