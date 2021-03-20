@@ -17,9 +17,8 @@ But most of them are not interesting.
 
 
 \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
-  int access_array(int *p, int len) {
-    for (int i = 0; i < len; i++) global_sum += p[i];
-  }
+  int access_array(int *p, int len)
+  { for (int i = 0; i < len; i++) global_sum += p[i]; }
 \end{minted}
 
 
@@ -38,9 +37,8 @@ But most of them are not interesting.
 
 \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
   struct O { int x, y, z; };
-  void access_object(struct O *obj) {
-    global_sum += obj->x + obj->y + obj->z;
-  }
+  void access_object(struct O *obj)
+  { global_sum += obj->x + obj->y + obj->z; }
 \end{minted}
 
 
@@ -146,9 +144,8 @@ Combining checks across loop iterations:
 
 \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
   int *p;
-  // Enough to check __asan_region_is_poisoned(a, n*sizeof(*a))
-  for (i = 0; i < n; ++i)
-    p[i];
+  //Enough check __asan_region_is_poisoned(a, n*sizeof(*a))
+  for (i = 0; i < n; ++i) p[i];
 \end{minted}
 
 The virtual address space is diviedde into 2 disjoiont classes:

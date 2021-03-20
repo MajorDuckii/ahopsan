@@ -277,16 +277,6 @@ Existing DBI tool can count the excuted memory access, but they lack of the sema
 We want to know what it is accessed, access an array element, a pointer derefernece, or strucutre member.
 
 
-\yphn{Contributions}
-This work made the following contributions:
-
-\begin{itemize}
-  \item A semantic-aware memory access profiler.
-  \item A semantic-aware address sanitizer.
-  \item A prototype implmentation of profiler.
-  \item A prototype implementation of sanitizer.
-  \item Detailed evaluations on SPEC.
-\end{itemize}
 
 
 To array access.
@@ -313,20 +303,6 @@ Memory access can be expected mode.
 \yphn{Problem of existing solutions}
 
 \yphn{Our solution}
-
-Does our contribution is big enough.
-Then it depends on how much imporviemence. Therefore, we need to study lowfat and asan first.
-In thory how does they work? and study thrir instrumentation.
-
-So, for differnet type of mmeory acces, applies differnt stragegees.
-Our main contricution is appiled on accessing array elements and struct members.
-
-
-For different memory access, apply differnet policies.
-
-
-Simple derefenece, how to check? We can combine with asan?
-
 
 
 \yphn{xxx conclusion}
@@ -367,3 +343,81 @@ The symbolic analysis algorithms are roughly designed according to my experience
 Now, need to be implemented.
 
 
+\yphn{Contributions}
+This work made the following contributions:
+
+\begin{itemize}
+  \item A semantic-aware address sanitizing scheme which aims to reduce the bounds-checking frequency.  For array element access, struct member and pointer deference applies We care about three kinds of memory accesses and apply different policies on different access.
+  \item A semantic-aware address sanitizer.
+  \item A prototype implmentation of profiler.
+  \item A prototype implementation of sanitizer.
+  \item Detailed evaluations on SPEC.
+\end{itemize}
+
+We care about three kinds of memory accesses and apply different policies on different access.
+
+\subsection{Asan \& Lowfat}
+Therefore, we need to study Lowfat and Asan first.
+
+
+% An IR instruction:
+% {In-mems, out-mem, vout, vins, scope}
+
+% Do we need to consider the scope?
+
+% while() {
+%     basic block;
+%   }
+
+% S_{inm}(I)
+% S_{outm}(I)
+% S_{mem}(I) = S_{inm}(I) U S_{outm}(I)
+
+% V_{outv}(I)
+% V_{inv}(I)
+% V_{val}{I} = V_{outv}(I) U V_{inv}(I)
+
+% S_{mem}{I} = {p, p+v, p+2*v, p+3*v}
+% Arracy access:
+% isFarAway(p, p_lastchk) && isOOB(ptr)
+
+% S_{mem}{I} = {p, p+v, p+3v}
+% S_{mem}{I'} = {p+v, p+2*v}
+
+
+% Object access:
+% isObj(ptr, type)
+
+% Pointer defreence
+% isOOB(ptr)
+
+
+% init(func)
+% for bb in func:
+% bb = {}
+% SI = {}
+
+
+
+% for BB in F:
+% if hasNewMS(BB):
+%   execFunc(BB)
+
+%   execFunc(BB)
+%   {
+%   for I in bb:
+%   switch(op(I)) {
+%       case op(I):
+%       v_out = op(I, vins)
+%       break;
+%       case ...
+%     }
+%   V_{outv}.add{v_out}
+%   v_{inm}.add{inm(I, v_ins)}
+%   v_{outm}.add(outm(I, v_out))
+
+%   S_{machine} = {R=xxx, M=xxx}
+
+%       for suc in succssor(bb):
+%       merge(SM_{suc}, S)
+%     }
