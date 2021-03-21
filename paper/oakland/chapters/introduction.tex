@@ -330,12 +330,12 @@ The key problem is bound checking elimination.
 
 The goal of this work is to reduce the checking frequency on accessing array elements and struct members.
 The problem can be classified as boundary checking elimination. In fact, the goal is very simple:
-```
-if (isFarAway(p, p_lastchk)) {
-    if (isOOB(p)) error();
-    p_lastchk = p;
-  }
-```
+% ```
+% if (isFarAway(p, p_lastchk)) {
+%     if (isOOB(p)) error();
+%     p_lastchk = p;
+%   }
+% ```
 
 Even though this problem sounds old, but not solved well.
 Existing solutions that hoist the checking outside loops, or split the loops into several parts, do not work well.
@@ -438,7 +438,7 @@ Therefore, we need to study Lowfat and Asan first.
   \footnotesize
   \begin{algorithmic}[1]
     \Function{ExecFunction}{$F$}
-    \For{bb in F.BBs} \Comment{Initialize machine states for all basic blocks}
+    \For{$bb$ in F.BBs} \Comment{Initialize machine states for all basic blocks}
     \State bb.InStates = {$\emptyset$} \Comment{Current available input states}
     \State bb.OutSuperState = {$\emptyset$} \Comment{A super set of all output states}
     \EndFor
@@ -447,9 +447,9 @@ Therefore, we need to study Lowfat and Asan first.
 
     \Do \Comment{Execute blocks which have new machine states}
 
-    \State bCont = false
-    \For{bb in F.BBs}
-    \While {s = bb.InStates.pop()}
+    \State $bCont$ = false
+    \For{$bb$ in F.BBs}
+    \While {$s$ = bb.InStates.pop()}
     \State ExecBasicBlock(bb, s)
     \State bCont = true;
     \EndWhile
@@ -466,10 +466,9 @@ Therefore, we need to study Lowfat and Asan first.
   \footnotesize
   \begin{algorithmic}[1]
     \Function{ExecBasicBlock}{$BB$, $S$}
-    \State outS = S.clone()  \Comment{Execute on a clone copy of $S$}
-    \For{I in BB}
-
-    \Switch{$I.opc$}
+    \State $outS$ = S.clone()  \Comment{Execute on a clone copy of $S$}
+    \For{$I$ in BB}
+    \Switch{I.Opc}
     \Case{$load$:}
     \State execInstrLoad(I, outS) \Comment{Execute $I$ and update $outS$}
     \EndCase
@@ -480,13 +479,12 @@ Therefore, we need to study Lowfat and Asan first.
     \State execInstr...(I, outS)
     \EndCase
     \EndSwitch
-
+    \State CollectRes(I) \Comment{Allow external code to collect execution results}
     \EndFor
 
     \State
-    \State bNew = MergeState(BB, outS) \Comment{True if $outS$ contains new things}
-    \If{bNew}
-    \For{bb in BB.Succs} \Comment{Add $outS$ to successor blocks as input}
+    \If{MergeState(BB, outS)} \Comment{True if $outS$ contains new things}
+    \For{$bb$ in BB.Succs} \Comment{Add $outS$ to successor blocks as inputs}
     \State bb.InStates.push(s.clone())
     \EndFor
     \EndIf
@@ -497,19 +495,130 @@ Therefore, we need to study Lowfat and Asan first.
 
 
 \begin{algorithm}
-  \caption{Merge output state $S$ into $BB.OutSuperState$ }
+  \caption{Merge output state $OS$ into $BB.OutSuperState$ }
   \footnotesize
   \begin{algorithmic}[1]
-    \Function{MergeState}{$BB$, $S$}
-    \State tmpSt = BB.OutSuperState.clone()
-    \State tmpSt = tmpSt $\cup$ $S$ \Comment{Merge output state $S$}
-    \State tmpSt = widenState(tmpSt) \Comment{Widening super output state}
-    \If{tmpSt != BB.OutSuperState}
-    \State BB.OutSuperState = tmpSt \Comment{state $S$ should carry new pattens}
+    \Function{MergeState}{$BB$, $OS$}
+    \State $SuperSt$ = BB.OutSuperState.clone()
+
+    % Merge registers
+    \State
+    \For {$(reg.id, reg.Vals)$ in OS.regs} \Comment{Merge register values}
+    \If {reg.id in SuperSt.keys()}
+    \State WidenValueSet(SuperSt[reg.id], reg.Vals)
+    \Else
+    \State SuperSt[reg.id] = reg.Vals
+    \EndIf
+    \EndFor
+
+    % Merge memory values
+    \State
+    \For {$(mem.id, mem.Vals)$ in OS.mems} \Comment{Merge memory values}
+    \If{mem.id in SuperSt.keys()}
+    \State WidenValueSet(SuperSt[mem.id], mem.Vals)
+    \Else
+    \State SuperSt[mem.id] = mem.Vals
+    \EndIf
+    \EndFor
+
+    % Test widening results
+    \State
+    \If{SuperSt != BB.OutSuperState} \Comment{Test merge results}
+    \State BB.OutSuperState = SuperSt \Comment{state $S$ should bring new pattens}
     \State return true \Comment{Return true if $S$ carries new pattern knowledge}
     \EndIf
     \State return false \Comment{Otherwise, return false}
     \EndFunction
   \end{algorithmic}
 \end{algorithm}
+
+
+\begin{algorithm}
+  \caption{Widening set $SS$ with value-set $VS$}
+  \footnotesize
+  \begin{algorithmic}[1]
+    \Function{WidenValueSet}{$SS$, $VS$}
+    \If{ $\top$ in SS.VS}
+    \State return  \Comment{Doesn't accept new values}
+    \EndIf
+
+    \State
+    \State $tmpSet$ = SS.VS $\cup$ VS
+    \If{tmpSet == SuperSet}
+    \State return \Comment{All values in VS are already contained in SS.VS}
+    \EndIf
+
+    \State
+    \State $newSet$ = tempSet - SS.VS
+    \State $newPat$ = patternize(newSet) \Comment{Convert new values to patterns}
+    \State SS.PS.push(newPat)
+    \State SS.VS = tempSet;
+    \If {WidenWithPatterns(SS)} \Comment{Apply heuristic rules}
+    \State return
+    \EndIf
+
+    \State
+    \If{sizeof(SS.VS) $>$ $6$} \Comment{ExecFunction is terminable}
+    \State SS.VS.append($\top$)
+    \EndIf
+
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+  \caption{Collect accessed mem-addresses on executing $I$}
+  \footnotesize
+  \begin{algorithmic}[1]
+
+    \Function{CollectMemAccess}{$I$} \Comment{CollecRes $:\rightarrow$ CollectMemAccess}
+    \State access = I.rdMem $\cup$ I.wrMem
+    \State I.memAccess.push(access)
+
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+
+Execution engine
+
+Memory access information for every instruction.
+Every instruction is identified with CFG?
+
+
+\begin{algorithm}
+  \caption{Analysis memory access semantic on scope $C$}
+  \footnotesize
+  \begin{algorithmic}[1]
+
+    \Function{AnalysisAccessSemantic}{$C$}
+    \State $MAC$ = $\emptyset$
+    \For{$e$ in C}
+    \If {e.type is $Instruction$}
+    \State MAC.append(e)
+    \ElsIf {e.type is $Scope$}
+    \State MAC.append(AnalysisAccessSemantic(e))
+    \Else
+    \State continue
+    \EndIf
+    \EndFor
+
+    % Do analysis
+    \State
+    \State Fix-me! Need heuristic rules!
+
+    \State
+    \State return MAC
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+
+
+
+
+
+Analysis memory access acoording to scope.
+
+
 
