@@ -434,34 +434,6 @@ Therefore, we need to study Lowfat and Asan first.
 
 
 \begin{algorithm}
-  \caption{Execute function $F$ with arguments $ARGS$}
-  \footnotesize
-  \begin{algorithmic}[1]
-    \Function{ExecFunction}{$F$}
-    \For{$bb$ in F.BBs} \Comment{Initialize machine states for all basic blocks}
-    \State bb.InStates = {$\emptyset$} \Comment{Current available input states}
-    \State bb.OutSuperState = {$\emptyset$} \Comment{A super set of all output states}
-    \EndFor
-    \State F.entryBB.InStates.push(\{ARGS\}) \Comment{Create a state for entry block}
-    \State
-
-    \Do \Comment{Execute blocks which have new machine states}
-
-    \State $bCont$ = false
-    \For{$bb$ in F.BBs}
-    \While {$s$ = bb.InStates.pop()}
-    \State ExecBasicBlock(bb, s)
-    \State bCont = true;
-    \EndWhile
-    \EndFor
-
-    \doWhile(bCont)
-    \EndFunction
-  \end{algorithmic}
-\end{algorithm}
-
-
-\begin{algorithm}
   \caption{Execute basic block $BB$ with machine state $S$}
   \footnotesize
   \begin{algorithmic}[1]

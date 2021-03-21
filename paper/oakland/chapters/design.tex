@@ -183,24 +183,65 @@ The instrumentation and data layout of Lowfat.
 
 Our symbolic execution engine executes LLVM-IR instructions in interpreting mode.
 The target virtual machine (VM) of this engine uses a model which is consistent with the LLVM-IR CPU model.
-Specifically, the VM's CPU has unlimited registers and can access any memory slots.
+Specifically, the VM's CPU has unlimited registers and memories.
 The contents stored in registers and memories are initialzied with symbolic values at machine startup.
 This rule is also applied to real arguments to functions.
-All symbolic values are in strings. A symbolic value may consisit with two parts, a pure symbolic value and a digital value.
 
-
-Dereferencing a memory address would get a value prefixed with ``V\_'' to its address.
+A symbolic value is a plural value that consists of two parts, i.e. a purely symbolic value, and a digital value.
+For simplification, the pure symbolic value is a lexical string.
+Sometimes a symbolic value should be stringified. This operation formats the two parts into substrings and concatenates them together.
+Dereferencing a memory address would get a symbolic value prefixed with ``V\_'' to its address.
 For example, to execute the instruction
-``\textit{\%2=load i32*,i32**\%p.addr}'' would make \textit{\%2=V\_\%p.addr}, if memory \textit{\%p.addr} is accessed for the first time.
-
+``\textit{\%2=load i32*,i32**\%p.addr}'' would make \textit{\%2=(V\_\%p.addr, 0)}, if memory \textit{\%p.addr} is accessed for the first time.
 
 The symbolic engine supports \textit{partial} mathematic operations, including addition, subtraction, multiplication, and division.
-Here, ``parital'' means these operations can apply on pure symbolic parts of two operators or their digital parts.
-Symbolic value \textit{V\_\%p.addr} adds \textit{2} would generate symbolic value \textit{V\_\%p.addr+2},
-and \textit{V\_\%p.addr+2} add \textit{4} would generate \textit{V\_\%p.addr+6}.
-Symbolic value \textit{V\_\%p.addr+6} minus \textit{V\_\%p.addr+2} generates \textit{4}.
+Here, ``partial'' means these operations apply on either pure symbolic parts or digital parts of two operands.
+Symbolic value \textit{(V\_\%p.addr, 0)} adds \textit{2} (i.e. \textit{(NULL, 2)}) would generate symbolic value \textit{(V\_\%p.addr, 2)},
+Symbolic value \textit{(V\_\%p.addr, 6)} minus \textit{(V\_\%p.addr, 2)} generates \textit{4} (i.e. \textit{(NULL, 4)}).
 
-Algorithm:
+Because we aim to analyze the memory access semantics inside a given function,
+so functions are the execution units of this VM.
+Meanwhile, basic blocks are the scheduling units of the VM.
+The initial machine state before executing is initialized with formal arguments to a given function.
+This state is fed to the entry block. In turn, the entry block (the same as any other block) feeds its output state to its successors.
+The VM continues this procedure until all basic blocks do not have new machine states to execute.
+Algorithm~\ref{alg:execfunction} depicts this procedure as function \textit{ExecFunction}.
+
+\begin{algorithm}
+  \caption{Execute function $F$ with arguments $ARGS$}
+  \footnotesize
+  \begin{algorithmic}[1]
+    \Function{ExecFunction}{$F$}
+    \For{$bb$ in F.BBs} \Comment{Initialize machine states for all basic blocks}
+    \State bb.InStates = {$\emptyset$} \Comment{Current available input states}
+    \State bb.OutSuperState = {$\emptyset$} \Comment{A super set of all output states}
+    \EndFor
+    \State F.entryBB.InStates.push(\{ARGS\}) \Comment{Create a state for entry block}
+    \State
+
+    \Do \Comment{Execute blocks which have new machine states}
+
+    \State $bCont$ = false
+    \For{$bb$ in F.BBs}
+    \While {$s$ = bb.InStates.pop()}
+    \State ExecBasicBlock(bb, s)
+    \State bCont = true;
+    \EndWhile
+    \EndFor
+
+    \doWhile(bCont)
+    \EndFunction
+  \end{algorithmic}
+  \label{alg:execfunction}
+\end{algorithm}
+
+
+
+
+
+inputs of
+
+The execution uni
 The exeuction enginne schedule the execution basic block by block.
 The schedule units are basiuc block.
 Each basic block are feed by a seriours of configuartion.
