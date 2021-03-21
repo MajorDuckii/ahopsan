@@ -430,3 +430,86 @@ Therefore, we need to study Lowfat and Asan first.
 %       for suc in succssor(bb):
 %       merge(SM_{suc}, S)
 %     }
+
+
+
+\begin{algorithm}
+  \caption{Execute function $F$ with arguments $ARGS$}
+  \footnotesize
+  \begin{algorithmic}[1]
+    \Function{ExecFunction}{$F$}
+    \For{bb in F.BBs} \Comment{Initialize machine states for all basic blocks}
+    \State bb.InStates = {$\emptyset$} \Comment{Current available input states}
+    \State bb.OutSuperState = {$\emptyset$} \Comment{A super set of all output states}
+    \EndFor
+    \State F.entryBB.InStates.push(\{ARGS\}) \Comment{Create a state for entry block}
+    \State
+
+    \Do \Comment{Execute blocks which have new machine states}
+
+    \State bCont = false
+    \For{bb in F.BBs}
+    \While {s = bb.InStates.pop()}
+    \State ExecBasicBlock(bb, s)
+    \State bCont = true;
+    \EndWhile
+    \EndFor
+
+    \doWhile(bCont)
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+  \caption{Execute basic block $BB$ with machine state $S$}
+  \footnotesize
+  \begin{algorithmic}[1]
+    \Function{ExecBasicBlock}{$BB$, $S$}
+    \State outS = S.clone()  \Comment{Execute on a clone copy of $S$}
+    \For{I in BB}
+
+    \Switch{$I.opc$}
+    \Case{$load$:}
+    \State execInstrLoad(I, outS) \Comment{Execute $I$ and update $outS$}
+    \EndCase
+    \Case{$store$:}
+    \State execInstrStore(I, outS)
+    \EndCase
+    \Case{$...$:}
+    \State execInstr...(I, outS)
+    \EndCase
+    \EndSwitch
+
+    \EndFor
+
+    \State
+    \State bNew = MergeState(BB, outS) \Comment{True if $outS$ contains new things}
+    \If{bNew}
+    \For{bb in BB.Succs} \Comment{Add $outS$ to successor blocks as input}
+    \State bb.InStates.push(s.clone())
+    \EndFor
+    \EndIf
+
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+  \caption{Merge output state $S$ into $BB.OutSuperState$ }
+  \footnotesize
+  \begin{algorithmic}[1]
+    \Function{MergeState}{$BB$, $S$}
+    \State tmpSt = BB.OutSuperState.clone()
+    \State tmpSt = tmpSt $\cup$ $S$ \Comment{Merge output state $S$}
+    \State tmpSt = widenState(tmpSt) \Comment{Widening super output state}
+    \If{tmpSt != BB.OutSuperState}
+    \State BB.OutSuperState = tmpSt \Comment{state $S$ should carry new pattens}
+    \State return true \Comment{Return true if $S$ carries new pattern knowledge}
+    \EndIf
+    \State return false \Comment{Otherwise, return false}
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
