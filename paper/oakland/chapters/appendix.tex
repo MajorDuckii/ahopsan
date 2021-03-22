@@ -1,14 +1,13 @@
 \section*{Appendix}
 
-The engine need to avoid state exploreaiotn caseus by loops.
+A machine state $S$ contain many registers and memories entries, which store various symbolic values.
+By design, after executing a basic block $BB$,
+its final machine state $S$ is passed to $BB$'s successors only when $S$ is determined as interesting.
+Here, ``interesting'' means register and memory values contain new data patterns in terms of $BB$'s previous executions.
 
-terminateable.
-
-caused by loops
-Every time executioni result of a basic block is rembered as histyorical exeuction state.
-
-The finsal state of a basic block is merged as part of histyorical exeuction state.
-This decsion can help the engione avoiding state exloloration.
+The determining function is named \textit{MergeState()} and listed as Algorithm~\ref{alg:mergestate}.
+Specifically, it tries to add all entries of $S$ into $BB$'s historical record set \textit{OutSuperState}, by invoking function \textit{WidenValueSet()}.
+State $S$ contains interesting information only when the \textit{OutSuperState} is changed, i.e. widened with new items.
 
 \begin{algorithm}
     \caption{Merge output state $OS$ into $BB.OutSuperState$ }
@@ -46,7 +45,18 @@ This decsion can help the engione avoiding state exloloration.
         \State return false \Comment{Otherwise, return false}
         \EndFunction
     \end{algorithmic}
+    \label{alg:mergestate}
 \end{algorithm}
+
+
+The Algorithm~\ref{alg:widenvalueset} for widening a value-set is depicted as function \textit{WidenValueSet()}.
+It mainly applies heuristic rules to analyze if a value-set $VS$ brings new information to a historical value-set $SS$.
+If yes, $SS$ would be updated with new information, otherwise be appended with a top value $\top$.
+Once $SS$ contains $\top$, then it is locked out from updating.
+In most scenarios, the heuristic rules can find out corresponding patterns and lock the widening procedure appropriately.
+To counter a few scenarios that make the heuristic rules failure,
+this algorithm uses a guard condition $sizeof(SS.VS) > upbound$ to forcibly terminate the widening.
+The upbound value is affected by the complexity of the target function, here using $6$ as an example.
 
 
 \begin{algorithm}
@@ -59,18 +69,9 @@ This decsion can help the engione avoiding state exloloration.
         \EndIf
 
         \State
-        \State $tmpSet$ = SS.VS $\cup$ VS
-        \If{tmpSet == SuperSet}
+        \State $cupSet$ = SS.VS $\cup$ VS
+        \If{cupSet == SuperSet}
         \State return \Comment{All values in VS are already contained in SS.VS}
-        \EndIf
-
-        \State
-        \State $newSet$ = tempSet - SS.VS
-        \State $newPat$ = patternize(newSet) \Comment{Convert new values to patterns}
-        \State SS.PS.push(newPat)
-        \State SS.VS = tempSet;
-        \If {WidenWithPatterns(SS)} \Comment{Apply heuristic rules}
-        \State return
         \EndIf
 
         \State
@@ -78,6 +79,15 @@ This decsion can help the engione avoiding state exloloration.
         \State SS.VS.append($\top$)
         \EndIf
 
+        \State
+        \State $subSet$ = cupSet - SS.VS
+        \If {WidenWithPatterns(SS,cupSet,subSet)} \Comment{Apply heuristic rules}
+        \State SS.VS = cupSet;
+        \State return
+        \EndIf
+
+
         \EndFunction
     \end{algorithmic}
+    \label{alg:widenvalueset}
 \end{algorithm}

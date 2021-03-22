@@ -1,214 +1,115 @@
 \section{System Design}
 
-
 \newcounter{dsgn}
 \renewcommand\yphn[1]{\stepcounter{dsgn} \textcolor{blue} {\thedsgn.} \yphl{#1}}
 
+This work applies symbolic address-set analysis to extract memory access semantics from LLVM-IR instructions.
+In turn, this analysis procedure is built upon a symbolic execution engine,
+which interprets IR instructions on a virtual machine with unlimited registers and memories.
+The instrumentation pass then exploits memory access semantics to insert boundary checks before memory accesses.
+For understanding, this section elaborates the design choices in a top-down fashion, i.e. starting from the highest abstract-level.
 
-We design a semantic-aware memory access profiler and
-a semantic-aware address sanitizer.
+\subsection{High-Level Program Semantics}
 
-\subsection{Languate Level Semantics}
-To parse the semantics of each memory access is critical.
 
-Currently, we define the following semantics: array access or struct access, pointer dereference.
+\subsection{IR-level Memory Access Semantics}
 
-\yphn{Inputs}
+% An important task is to collect the semantics of memory access.
 
-We exploit the source code.
+% \subsection{Memory object organization}
+% Do we need to use variable size red-zones for different kinds of objects?
 
-\yphn{Outputs}
-For a program, both profiler and sanitizer would generate their binaries.
+% \subsubsection{Heap Buffers}
 
+% \subsubsection{Stack buffers}
 
-\subsection{Semantic Analysis}
-An important task is to collect the semantics of memory access.
+% \subsubsection{Internal buffers}
+% An object sometimes contains a buffer inside itself.
+% This buffer may be security-sensitive if its adjacent members are function pointers.
 
-\subsection{Memory object organization}
-Do we need to use variable size red-zones for different kinds of objects?
+% For such an object, we create red-zones to surround the buffers, similar to what Asan does on stack buffers.
 
-\subsubsection{Heap Buffers}
+% \subsection{Instrumentation}
 
-\subsubsection{Stack buffers}
+% Do we need to do another check after a loop?
 
-\subsubsection{Internal buffers}
-An object sometimes contains a buffer inside itself.
-This buffer may be security-sensitive if its adjacent members are function pointers.
+% \subsection{Exception Handling}
 
-For such an object, we create red-zones to surround the buffers, similar to what Asan does on stack buffers.
+\subsection{Memory Access Instrumentation}
 
-\subsection{Instrumentation}
 
-Do we need to do another check after a loop?
+% For array access:
 
-\subsection{Exception Handling}
+% \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+%   if (isFarAway(ptr, ptr_lastchk)) {
+%     if (isOOB(ptr)) error(); // ...
+%   }
+% \end{minted}
 
+% We have two choices:
 
-\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{llvm}
-  entry:
-    %p.addr = alloca i8*, align 8
-    store i8* %p, i8** %p.addr, align 8
-    br label %while.cond  
-  while.cond:
-    %0 = load i8*, i8** %p.addr, align 8
-    %1 = load i8, i8* %0, align 1
-    %tobool = icmp ne i8 %1, 0
-    br i1 %tobool, label %while.body, label %while.end
-  while.body:    
-    %2 = load i8*, i8** %p.addr, align 8
-    %3 = load i8, i8* %2, align 1
-    %conv = sext i8 %3 to i32
-    %4 = load i32, i32* @globalx, align 4
-    %add = add nsw i32 %4, %conv
-    store i32 %add, i32* @globalx, align 4
-    %5 = load i8*, i8** %p.addr, align 8
-    %incdec.ptr = getelementptr inbounds i8, i8* %5, i32 1
-    store i8* %incdec.ptr, i8** %p.addr, align 8
-    br label %while.cond  
-  while.end:
-    ret void
-\end{minted}
 
-A sound algorithm.
+% Chocie 1. Use fixed stride: This is simple, but memory overhead would be considerable.
 
-Symbolic address-set Analsysis based on Symbolic IR execution.
+% Suppose the smallest red-zones size is 64 bytes.
 
-This is really an old problem.
+% \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+%   if ((p ^ p_lastchk) < 64) {
+%     if (isOOB(p)) error();
+%     p_lastchk = p;
+%   }
+% \end{minted}
 
 
+% Choice 2. use variable stride.
+% This is flexible to set the red-zone size for differnt object thus can decrease memory overhead.
+% But it would increase register pressure.
 
 
+% \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+%   if ((p ^ p_lastchk) < p_rdsize) {
+%     if (isOOB(p)) error();
+%     if (isFirstChk(p_lastchk)) p_rdsize = rdsize(p);
+%     p_lastchk = p;
+%   }
+% \end{minted}
 
 
-\subsection{Symbolic Address-set Analysis}
-For IR instruction, simply idenfitied by the line number.
-On my symbolic execution engine, collect the accessed address by each instruction.
 
-Then analsys the memory access patterns, to
-idenitfy array access an struct member access.
-
-
-
-
-\subsection{Instrumentation}
-
-\subsection{Data Layout}
-
-
-
-Suppose now we know where are the arracy access and datamember access.
-They how we desingh the data layout?
-
-
-\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
-  if (isFarAway(ptr, ptr_lastchk)) {
-    if (isOOB(ptr)) error(); // ...
-  }
-\end{minted}
-
-1. use fixed stride;
-abs(ptr - ptr_lastchk) < 64;
-It doesn't need memory access.
-To guarantees safe memory access. SO the smallest size of red-zones is 64 bytes.
-
-The memory overhead would be considerable.
-
-
-if (isFarAway(ptr, ptr_lastchk)) {
-    if(isOOB(ptr)) error();
-    ptr_lastchk = ptr;
-  }
-
-\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
-  if ((p ^ p_lastchk) < 64) {
-    if (isOOB(p)) error();
-    p_lastchk = p;
-  }
-\end{minted}
-
-
-2. use variable stride;
-abs(ptr-ptr_lastchk) < ptr_rdsize;
-
-
-
-\begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
-  if ((p ^ p_lastchk) < p_rdsize) {
-    if (isOOB(p)) error();
-    if (isFirstChk(p_lastchk)) p_rdsize = rdsize(p);
-    p_lastchk = p;
-  }
-\end{minted}
-
-
-We use 32 bit registers. Give a change to compile if it can make good use of a 64bit regitesr as two 32 bit registes.
-
-The memory is stroed.
-
-
-All size information are stroed in anarray, can be simply extracted from ptr.
-
-~2x memory overhead.
-
-So it needs one more memory access.
-
-
-So each data object contains some metadata, the size of data.
-
-\yphn{ISOOB}
-So for each memory address, we can round to the start address.
-So if the data is overwrite or overread, then it would ovwertiet the cookies.
-This bechaviour would be detected.
-
-For heaps buffers, we do like above. Use a lowfat style check.
-
-For stack, how to protect it?
-
-We need a final check for arrasy access and object access.
-But don't need for database dereference.
-They should be a not of data-pointers.
-
-
-For stack buffers, can we use the asan style checks?
-How we store metadata and set the red-zone?
-
-
-\yphn{How does Asan work?}
-The instrumentation and data layout of Asan.
-
-\yphn{How does Lowfat work?}
-The instrumentation and data layout of Lowfat.
 
 \subsection{Symbolic Execution Engine}
 
-Our symbolic execution engine executes LLVM-IR instructions in interpreting mode.
-The target virtual machine (VM) of this engine uses a model which is consistent with the LLVM-IR CPU model.
-Specifically, the VM's CPU has unlimited registers and memories.
+The symbolic execution engine executes LLVM-IR instructions in interpreting mode.
+The target virtual machine (VM) of this engine is modeled with unlimited registers and memories.
+Thus, this VM model is compatible with the LLVM-IR CPU model.
 The contents stored in registers and memories are initialzied with symbolic values at machine startup.
-This rule is also applied to real arguments to functions.
+This rule is also applied to function arguments.
 
-A symbolic value is a plural value that consists of two parts, i.e. a purely symbolic value, and a digital value.
+A symbolic value is a plural value that consists of two parts, i.e. a purely symbolic value and a digital value.
 For simplification, the pure symbolic value is a lexical string.
-Sometimes a symbolic value should be stringified. This operation formats the two parts into substrings and concatenates them together.
-Dereferencing a memory address would get a symbolic value prefixed with ``V\_'' to its address.
+Sometimes a symbolic value would be stringified.
+Technically, this operation is accomplished by formating both parts into substrings and then concatenating them together.
+Dereferencing a memory address would get a symbolic value, whose pure symbolic part is a ``V\_'' prefix plus the stringified address.
 For example, to execute the instruction
-``\textit{\%2=load i32*,i32**\%p.addr}'' would make \textit{\%2=(V\_\%p.addr, 0)}, if memory \textit{\%p.addr} is accessed for the first time.
+``\textit{\%2=load i32*,i32**\%p.addr}'' would assign regiser \textit{\%2} with a symbolic value \textit{(V\_\%p.addr, 0)},
+if memory \textit{\%p.addr} is accessed for the first time.
 
 The symbolic engine supports \textit{partial} mathematic operations, including addition, subtraction, multiplication, and division.
-Here, ``partial'' means these operations apply on either pure symbolic parts or digital parts of two operands.
-Symbolic value \textit{(V\_\%p.addr, 0)} adds \textit{2} (i.e. \textit{(NULL, 2)}) would generate symbolic value \textit{(V\_\%p.addr, 2)},
-Symbolic value \textit{(V\_\%p.addr, 6)} minus \textit{(V\_\%p.addr, 2)} generates \textit{4} (i.e. \textit{(NULL, 4)}).
+Here, ``partial'' means these operations apply only on either pure symbolic parts or digital parts of two operands.
+For instance, symbolic value \textit{(V\_\%p.addr, 0)} plus \textit{2} (can be denoted as \textit{(NULL, 2)}) makes symbolic value \textit{(V\_\%p.addr, 2)},
+while symbolic value \textit{(V\_\%p.addr, 6)} minus \textit{(V\_\%p.addr, 2)} makes \textit{(NULL, 4)}).
 
-Because we aim to analyze the memory access semantics inside a given function,
-so functions are the execution units of this VM.
-Meanwhile, basic blocks are the scheduling units of the VM.
-The initial machine state before executing is initialized with formal arguments to a given function.
-This state is fed to the entry block. In turn, the entry block (the same as any other block) feeds its output state to its successors.
-The VM continues this procedure until all basic blocks do not have new machine states to execute.
+This engine mainly focuse on helping in-procudre memory access analysis,
+so functions are the execution units.
+In other words, the VM is reset before executing any function, therefore all possible registers and memories are initialized with fresh contents.
+The initial machine state before executing is updated with parameters to a given function.
+This state is fed to the entry block.
+In turn, the entry block (the same as any other block) feeds its output state to its successors.
+The VM continues this procedure until all basic blocks do not have any new machine states to execute.
 Algorithm~\ref{alg:execfunction} depicts this procedure as function \textit{ExecFunction}.
 
 \begin{algorithm}
-  \caption{Execute function $F$ with arguments $ARGS$}
+  \caption{Execute function $F$ with parameters $PARMS$}
   \footnotesize
   \begin{algorithmic}[1]
     \Function{ExecFunction}{$F$}
@@ -216,7 +117,7 @@ Algorithm~\ref{alg:execfunction} depicts this procedure as function \textit{Exec
     \State bb.InStates = {$\emptyset$} \Comment{Current available input states}
     \State bb.OutSuperState = {$\emptyset$} \Comment{A super set of all output states}
     \EndFor
-    \State F.entryBB.InStates.push(\{ARGS\}) \Comment{Create a state for entry block}
+    \State F.entryBB.InStates.push(\{PARMS\}) \Comment{Create a state for entry block}
     \State
 
     \Do \Comment{Execute blocks which have new machine states}
@@ -234,23 +135,6 @@ Algorithm~\ref{alg:execfunction} depicts this procedure as function \textit{Exec
   \end{algorithmic}
   \label{alg:execfunction}
 \end{algorithm}
-
-To execute a basic block $BB$ on a machine state $S$, the engine interprets all the LLVM-IR instructions in order.
-Algorithm~\ref{} depicts this procedure as function \textit{ExecBasicBlock}.
-Roughly, the interpreting operations on an IR instruction are consistent with the instruction's semantics definition.
-Note that, because our final goal is to extract memory access semantics,
-so an instruction whose execution does not affect memory access is ignored.
-All the operations are embodied on $S$ as state changes.
-The final state of $S$ is propagated to $BB$'s successors conditionally,
-depending on whether $S$ brings new memory access patterns/modes to $BB$'s previous executions.
-This conditional test can decrease the number of machine states to basic blocks,
-therefore the engine would be terminated at some time even the function contains loops.
-More details about this conditional test can be checked out in the appendix~\ref{}.
-
-
-The engine also provides an interface named \textit{CollectRes()} for external code to acquire
-the execution results of IR instructions.
-The other parts of the engine are decoupled with external code.
 
 
 \begin{algorithm}
@@ -283,33 +167,129 @@ The other parts of the engine are decoupled with external code.
 
     \EndFunction
   \end{algorithmic}
+  \label{alg:execbasicblock}
 \end{algorithm}
 
+To execute a basic block $BB$ on a machine state $S$, the engine interprets all the LLVM-IR instructions in order.
+Algorithm~\ref{alg:execbasicblock} depicts this procedure as function \textit{ExecBasicBlock}.
+Roughly, the interpreting operations on an IR instruction are consistent with the instruction's semantics definition.
+Note that, because our final goal is to extract memory access semantics,
+so an instruction whose execution does have effects on memory access is ignored.
+The execution results of an IR instruction are applied on $S$ as state changes.
+The final state of $S$ is propagated to $BB$'s successors conditionally,
+depending on whether $S$ can bring new value patterns/modes to $BB$'s previous executions.
+This conditional test can decrease the number of machine states to basic blocks,
+therefore the engine would be terminated at some time even the function contains loops.
+More details about this conditional test can be checked out in the appendix section.
+
+
+The engine also provides an interface named \textit{CollectRes()} for external code to acquire
+the execution results of IR instructions.
+The other parts of the engine are decoupled with external code.
+
+
+\subsection{Symbolic Address-set Analysis}
+
+A simple while-loop listed below would be converted into an IR instruction sequence as shown in listing~\ref{code:whileIR}.
+$$void \ foo(char *p) \{ while(*p)\{globalx \mathrel{+}= *p; p ++;\} \}$$
+% \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{cpp}
+%   void foo(char *p) { while(*p){globalx += *p; p++;} }
+% \end{minted}
+
+
+\begin{listing}
+  \begin{minted}[fontsize=\scriptsize,frame=single,linenos,numbersep=-6pt]{llvm}
+  entry:
+    %p.addr = alloca i8*, align 8
+    store i8* %p, i8** %p.addr, align 8
+    br label %while.cond  
+  while.cond:
+    %0 = load i8*, i8** %p.addr, align 8
+    %1 = load i8, i8* %0, align 1
+    %tobool = icmp ne i8 %1, 0
+    br i1 %tobool, label %while.body, label %while.end
+  while.body:    
+    %2 = load i8*, i8** %p.addr, align 8
+    %3 = load i8, i8* %2, align 1
+    %conv = sext i8 %3 to i32
+    %4 = load i32, i32* @globalx, align 4
+    %add = add nsw i32 %4, %conv
+    store i32 %add, i32* @globalx, align 4
+    %5 = load i8*, i8** %p.addr, align 8
+    %incdec.ptr = getelementptr inbounds i8, i8* %5, i32 1
+    store i8* %incdec.ptr, i8** %p.addr, align 8
+    br label %while.cond  
+  while.end:
+    ret void
+\end{minted}
+  \caption{IR instructions to a simple C/C++ while-loop.}
+  \label{code:whileIR}
+\end{listing}
+
+\subsection{Data Layout}
 
 
 
+% We use 32 bit registers. Give a change to compile if it can make good use of a 64bit regitesr as two 32 bit registes.
 
-inputs of
+% The memory is stroed.
 
-The execution uni
-The exeuction enginne schedule the execution basic block by block.
-The schedule units are basiuc block.
-Each basic block are feed by a seriours of configuartion.
-Each configuration is consist with a set of rgistesrs status.
-The entry basick block start with an empty basic block.
-The partermeters.
-Eveay new occurentcy of a regiuster is denoted by a symbol value.
-Every IR instructoin is.
-The register staus changes along with the IR execution.
 
-Machine status: Register status. + Memory status.
+% All size information are stroed in anarray, can be simply extracted from ptr.
 
-Change the status along the IR execution.
+% ~2x memory overhead.
 
-All registesrs and memroy slots are initialized with symbolic values.
-Therefore, the first read of a registe or a memoery adddress would get a symbolic values.
+% So it needs one more memory access.
 
-Every Function is an execution unit.
 
-Merge operations
+% So each data object contains some metadata, the size of data.
+
+% \yphn{ISOOB}
+% So for each memory address, we can round to the start address.
+% So if the data is overwrite or overread, then it would ovwertiet the cookies.
+% This bechaviour would be detected.
+
+% For heaps buffers, we do like above. Use a lowfat style check.
+
+% For stack, how to protect it?
+
+% We need a final check for arrasy access and object access.
+% But don't need for database dereference.
+% They should be a not of data-pointers.
+
+
+% For stack buffers, can we use the asan style checks?
+% How we store metadata and set the red-zone?
+
+
+% \yphn{How does Asan work?}
+% The instrumentation and data layout of Asan.
+
+% \yphn{How does Lowfat work?}
+% The instrumentation and data layout of Lowfat.
+
+
+% inputs of
+
+% The execution uni
+% The exeuction enginne schedule the execution basic block by block.
+% The schedule units are basiuc block.
+% Each basic block are feed by a seriours of configuartion.
+% Each configuration is consist with a set of rgistesrs status.
+% The entry basick block start with an empty basic block.
+% The partermeters.
+% Eveay new occurentcy of a regiuster is denoted by a symbol value.
+% Every IR instructoin is.
+% The register staus changes along with the IR execution.
+
+% Machine status: Register status. + Memory status.
+
+% Change the status along the IR execution.
+
+% All registesrs and memroy slots are initialized with symbolic values.
+% Therefore, the first read of a registe or a memoery adddress would get a symbolic values.
+
+% Every Function is an execution unit.
+
+% Merge operations
 
