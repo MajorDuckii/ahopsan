@@ -235,6 +235,56 @@ Algorithm~\ref{alg:execfunction} depicts this procedure as function \textit{Exec
   \label{alg:execfunction}
 \end{algorithm}
 
+To execute a basic block $BB$ on a machine state $S$, the engine interprets all the LLVM-IR instructions in order.
+Algorithm~\ref{} depicts this procedure as function \textit{ExecBasicBlock}.
+Roughly, the interpreting operations on an IR instruction are consistent with the instruction's semantics definition.
+Note that, because our final goal is to extract memory access semantics,
+so an instruction whose execution does not affect memory access is ignored.
+All the operations are embodied on $S$ as state changes.
+The final state of $S$ is propagated to $BB$'s successors conditionally,
+depending on whether $S$ brings new memory access patterns/modes to $BB$'s previous executions.
+This conditional test can decrease the number of machine states to basic blocks,
+therefore the engine would be terminated at some time even the function contains loops.
+More details about this conditional test can be checked out in the appendix~\ref{}.
+
+
+The engine also provides an interface named \textit{CollectRes()} for external code to acquire
+the execution results of IR instructions.
+The other parts of the engine are decoupled with external code.
+
+
+\begin{algorithm}
+  \caption{Execute basic block $BB$ with machine state $S$}
+  \footnotesize
+  \begin{algorithmic}[1]
+    \Function{ExecBasicBlock}{$BB$, $S$}
+    \State $outS$ = S.clone()  \Comment{Execute on a clone copy of $S$}
+    \For{$I$ in BB}
+    \Switch{I.Opc}
+    \Case{$load$:}
+    \State execInstrLoad(I, outS) \Comment{Execute $I$ and update $outS$}
+    \EndCase
+    \Case{$store$:}
+    \State execInstrStore(I, outS)
+    \EndCase
+    \Case{$...$:}
+    \State execInstr...(I, outS)
+    \EndCase
+    \EndSwitch
+    \State CollectRes(I) \Comment{Allow external code to collect execution results}
+    \EndFor
+
+    \State
+    \If{MergeState(BB, outS)} \Comment{True if $outS$ contains new things}
+    \For{$bb$ in BB.Succs} \Comment{Add $outS$ to successor blocks as inputs}
+    \State bb.InStates.push(s.clone())
+    \EndFor
+    \EndIf
+
+    \EndFunction
+  \end{algorithmic}
+\end{algorithm}
+
 
 
 

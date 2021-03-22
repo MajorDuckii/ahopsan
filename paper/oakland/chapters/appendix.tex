@@ -1,0 +1,83 @@
+\section*{Appendix}
+
+The engine need to avoid state exploreaiotn caseus by loops.
+
+terminateable.
+
+caused by loops
+Every time executioni result of a basic block is rembered as histyorical exeuction state.
+
+The finsal state of a basic block is merged as part of histyorical exeuction state.
+This decsion can help the engione avoiding state exloloration.
+
+\begin{algorithm}
+    \caption{Merge output state $OS$ into $BB.OutSuperState$ }
+    \footnotesize
+    \begin{algorithmic}[1]
+        \Function{MergeState}{$BB$, $OS$}
+        \State $SuperSt$ = BB.OutSuperState.clone()
+
+        % Merge registers
+        \State
+        \For {$(reg.id, reg.Vals)$ in OS.regs} \Comment{Merge register values}
+        \If {reg.id in SuperSt.keys()}
+        \State WidenValueSet(SuperSt[reg.id], reg.Vals)
+        \Else
+        \State SuperSt[reg.id] = reg.Vals
+        \EndIf
+        \EndFor
+
+        % Merge memory values
+        \State
+        \For {$(mem.id, mem.Vals)$ in OS.mems} \Comment{Merge memory values}
+        \If{mem.id in SuperSt.keys()}
+        \State WidenValueSet(SuperSt[mem.id], mem.Vals)
+        \Else
+        \State SuperSt[mem.id] = mem.Vals
+        \EndIf
+        \EndFor
+
+        % Test widening results
+        \State
+        \If{SuperSt != BB.OutSuperState} \Comment{Test merge results}
+        \State BB.OutSuperState = SuperSt \Comment{state $S$ should bring new pattens}
+        \State return true \Comment{Return true if $S$ carries new pattern knowledge}
+        \EndIf
+        \State return false \Comment{Otherwise, return false}
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+    \caption{Widening set $SS$ with value-set $VS$}
+    \footnotesize
+    \begin{algorithmic}[1]
+        \Function{WidenValueSet}{$SS$, $VS$}
+        \If{ $\top$ in SS.VS}
+        \State return  \Comment{Doesn't accept new values}
+        \EndIf
+
+        \State
+        \State $tmpSet$ = SS.VS $\cup$ VS
+        \If{tmpSet == SuperSet}
+        \State return \Comment{All values in VS are already contained in SS.VS}
+        \EndIf
+
+        \State
+        \State $newSet$ = tempSet - SS.VS
+        \State $newPat$ = patternize(newSet) \Comment{Convert new values to patterns}
+        \State SS.PS.push(newPat)
+        \State SS.VS = tempSet;
+        \If {WidenWithPatterns(SS)} \Comment{Apply heuristic rules}
+        \State return
+        \EndIf
+
+        \State
+        \If{sizeof(SS.VS) $>$ $6$} \Comment{ExecFunction is terminable}
+        \State SS.VS.append($\top$)
+        \EndIf
+
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
