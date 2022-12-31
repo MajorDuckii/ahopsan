@@ -1,7 +1,9 @@
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,6 +39,7 @@ public:
   PtrTrack() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
+  bool runOnFunction_old(Function &F);
   void instrumentMop(InterestingMemoryOperand &O);
   void getInterestingMemoryOperands(Instruction *I, SmallVectorImpl<InterestingMemoryOperand> &Interesting);
   void doInstrumentAddress(Instruction *I, Instruction *InsertBefore, Value *Addr);
@@ -46,6 +49,22 @@ public:
 } // end of anonymous namespace
 
 bool PtrTrack::runOnFunction(Function &F)
+{
+  // Print name of function
+  errs() << "Function: " << F.getName().data() << "\n";
+
+  // Search for llvm.dbg.declare
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB) {
+      DbgDeclareInst *dbg = dyn_cast<DbgDeclareInst>(&I);
+      if (!dbg)
+        continue;
+      if (DILocalVariable *varMD = dbg->getVariable()) // probably not needed?
+        errs() << varMD->getName() << "\n";
+    }
+}
+
+bool PtrTrack::runOnFunction_old(Function &F)
 {
   // Print name of function
   std::cerr << F.getName().data() << "\n";
